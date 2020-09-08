@@ -8,7 +8,7 @@ import re
 from PDFExtract import PDFExtract
 
 
-def get_file_list(root, ftype=".txt".encode('utf-8')):
+def get_file_list(root, ftype):
     FileList = []
     FileName = []
     for dirPath, dirNames, fileNames in os.walk(root.encode('utf-8')):
@@ -54,6 +54,34 @@ def preprocess_author(authors):
 
 if __name__ == '__main__':
     year = input("year: ")
+    file_dict={}
+    # read Taai Domestic track xlsx data
+    df = pd.read_excel("import_xlxs/"+year+"/0.xlsx",keep_default_na=False)
+    # read Taai International track xlsx data
+    df1 = pd.read_excel("import_xlxs/"+year+"/1.xlsx",keep_default_na=False)
+    for i in range(len(df["Paper Title"])):
+        if df["Files"][i] and df["Paper Title"][i]:
+            filename=df["Files"][i].split(' ')[0]
+            file_dict[filename]=df["Paper Title"][i]+".pdf"
+    
+    for i in range(len(df1["Paper Title"])):
+        if df1["Files"][i] and df1["Paper Title"][i]:
+            filename=df1["Files"][i].split(' ')[0]
+            file_dict[filename]=df1["Paper Title"][i]+".pdf"
+    ######### rename filename
+    
+    PDF_FilePath, PDF_FileName = get_file_list('./pdf/'+year+'/0/',ftype=".pdf".encode('utf-8'))
+    PDF_FilePath_2, PDF_FileName_2 = get_file_list('./pdf/'+year+'/1/',ftype=".pdf".encode('utf-8'))
+    for i in range(len(PDF_FilePath)):
+        filepath,filename=os.path.split(PDF_FilePath[i].decode())
+        if file_dict.get(filename,0)!=0:
+            os.rename(PDF_FilePath[i], filepath+"/"+file_dict[filename])
+    for i in range(len(PDF_FilePath_2)):
+        filepath,filename=os.path.split(PDF_FilePath_2[i].decode())
+        if file_dict.get(filename,0)!=0:
+            os.rename(PDF_FilePath_2[i], filepath+"/"+file_dict[filename])
+
+    ######### covert pdf to text
     PDFExtract_instance = PDFExtract()
     PDFExtract_instance.pdftoText(year)
     # connect the solr server
@@ -63,18 +91,14 @@ if __name__ == '__main__':
         server_url, auth=('username', 'password'), timeout=60)
 
     year = str(year)
-    # read Taai Domestic track xlsx data
-    df = pd.read_excel("import_xlxs/"+year+"/0.xlsx")
-    # read Taai International track xlsx data
-    df1 = pd.read_excel("import_xlxs/"+year+"/1.xlsx")
 
     authors = {}
     paper_list = []
     authors_key = {}
     with open('authors_key.txt', "r", encoding="utf-8") as json_file:
         authors_key = json.load(json_file)
-    FilePath, FileName = get_file_list('./txt/'+year+'/0/')
-    FilePath_2, FileName_2 = get_file_list('./txt/'+year+'/1/')
+    FilePath, FileName = get_file_list('./txt/'+year+'/0/',ftype=".txt".encode('utf-8'))
+    FilePath_2, FileName_2 = get_file_list('./txt/'+year+'/1/',ftype=".txt".encode('utf-8'))
     content = {}
     for i in range(len(FilePath)):
         with open(FilePath[i], 'r', encoding='utf-8') as f:
@@ -89,6 +113,8 @@ if __name__ == '__main__':
     authors_key_paper = []
     # paper  information
     for i in range(len(df["Paper Title"])):
+        if df["Files"][i] or df["Paper Title"][i]:
+            continue
         paper = {}
         paper['title'] = df["Paper Title"][i]
         paper['authors'] = authors[i]
@@ -108,6 +134,8 @@ if __name__ == '__main__':
         authors[i] = preprocess_author(df1["Author Names"][i])
 
     for i in range(len(df1["Paper Title"])):
+        if df1["Files"][i] or df1["Paper Title"][i]:
+            continue
         paper = {}
         paper['title'] = df1["Paper Title"][i]
         paper['authors'] = authors[i]
