@@ -63,7 +63,7 @@ TAAI/
 - Track Name
 - Files
 
-![](https://imgur.com/a/vOyHgoI)
+![](https://i.imgur.com/ZsOSVXP.png)
 
 ## Attention ! !
 - [論文名稱].pdf  
